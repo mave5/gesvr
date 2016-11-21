@@ -256,5 +256,75 @@ def disp_hist(X,n1=1,r=1,c=1,d=0):
         plt.title(n1[k])
 
 
+# convert contours to centers
+def contour2roi(Y):
+    Y=np.array(Y>0,dtype='uint8')    
+    N=Y.shape[0]
+    cXY=np.zeros((N,2))
+    
+    for k in range(N):    
+        ret,thresh = cv2.threshold(255*Y[k,0],127,255,0)
+        contours,im2= cv2.findContours(thresh,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+        c = contours[0]
+    
+        # compute the center of the contour
+        M = cv2.moments(c)
+        cX,cY=0,0
+        if M["m00"]!= 0:
+            cX = int(M["m10"] / M["m00"])
+            cY = int(M["m01"] / M["m00"])
+        
+        cXY[k,:]=(cX,cY)
+    return cXY
+    
+    
 
+
+
+# sample
+def disp_img_2masks(img,mask1,mask2,r=1,c=1,d=0,indices=None):
+    if mask1 is None:
+        mask1=np.zeros(img.shape,dtype='uint8')
+    if mask2 is None:
+        mask2=np.zeros(img.shape,dtype='uint8')
+        
+    N=r*c    
+    if d==2:
+        # convert to N*C*H*W
+        img=np.transpose(img,(2,0,1))
+        img=np.expand_dims(img,axis=1)
+        
+        mask1=np.transpose(mask1,(2,0,1))
+        mask1=np.expand_dims(mask1,axis=1)
+
+        mask2=np.transpose(mask2,(2,0,1))
+        mask2=np.expand_dims(mask2,axis=1)
+        
+    if indices is None:    
+        # random indices   
+        n1=np.random.randint(img.shape[0],size=N)
+    else:
+        n1=indices
+    
+    I1=img[n1,0]
+    M1=np.zeros(I1.shape,dtype='uint8')
+    for c1 in range(mask1.shape[1]):
+        M1=np.logical_or(M1,mask1[n1,c1,:])
+    
+    #M1=mask1[n1,0]
+    #M2=mask2[n1,0]
+    M2=np.zeros(I1.shape,dtype='uint8')
+    for c1 in range(mask2.shape[1]):
+        M2=np.logical_or(M2,mask2[n1,c1,:])
+    
+    C1=(0,255,9)
+    C2=(255,0,0)
+    for k in range(N):    
+        imgmask=image_with_mask(I1[k],M1[k],C1)
+        imgmask=image_with_mask(imgmask,M2[k],C2)
+        plt.subplot(r,c,k+1)
+        plt.imshow(imgmask)
+        plt.title(n1[k])
+    plt.show()            
+    return n1    
 
